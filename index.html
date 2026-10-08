@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visualisasi Matrix Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: lembar kerja teknik — panel kontrol di atas, rantai matriks, lalu dua tabel DP berdampingan dan panel perhitungan */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#18202d; --muted:#5b6678; --line:#d5dbe4;
+  --accent:#1f5fbf; --accent-soft:#e3ecfa; --hot:#c4610e; --hot-soft:#fbeadb; --good:#1d7a4a; --good-soft:#dff2e7;
+  --font-display:"Spline Sans", "Segoe UI", system-ui, sans-serif;
+  --font-body:"Spline Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161e; --surface:#19202b; --ink:#e6ebf2; --muted:#9aa6b8; --line:#2c3644;
+  --accent:#6ea3f0; --accent-soft:#1e2d45; --hot:#f0a35c; --hot-soft:#3a2818; --good:#5cc38c; --good-soft:#173326; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161e; --surface:#19202b; --ink:#e6ebf2; --muted:#9aa6b8; --line:#2c3644;
+  --accent:#6ea3f0; --accent-soft:#1e2d45; --hot:#f0a35c; --hot-soft:#3a2818; --good:#5cc38c; --good-soft:#173326; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:20px;padding-block:24px 48px;display:grid;gap:20px}
+h1{font-family:var(--font-display);font-size:clamp(1.5rem,3vw,2rem);font-weight:700;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.lead{margin:4px 0 0;color:var(--muted);max-width:68ch}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.field{display:grid;gap:4px;flex:1 1 260px;min-width:0}
+input[type=text]{font-family:var(--font-mono);font-size:.95rem;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);width:100%}
+button,select{font:inherit;font-size:.9rem;padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{font-size:.8rem;padding:5px 9px}
+.err{color:var(--hot);font-size:.85rem;min-height:1.2em}
+.chain{display:flex;flex-wrap:wrap;gap:8px}
+.mat{font-family:var(--font-mono);font-size:.82rem;border:1px solid var(--line);border-radius:6px;padding:6px 9px;background:var(--bg);display:grid;gap:1px;transition:background .2s,border-color .2s}
+.mat b{font-family:var(--font-display);font-size:.95rem}
+.mat.inL{background:var(--accent-soft);border-color:var(--accent)}
+.mat.inR{background:var(--hot-soft);border-color:var(--hot)}
+.player{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.player input[type=range]{flex:1 1 200px;min-width:0;accent-color:var(--accent)}
+.counter{font-family:var(--font-mono);font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;font-family:var(--font-mono);font-size:.8rem;font-variant-numeric:tabular-nums}
+th{color:var(--muted);font-weight:600;padding:4px 6px;font-size:.75rem}
+td{border:1px solid var(--line);min-width:58px;height:34px;text-align:right;padding:3px 6px;transition:background .2s}
+td.void{border-color:transparent}
+td.diag{color:var(--muted)}
+td.done{background:var(--surface)}
+td.cur{outline:2px solid var(--ink);outline-offset:-2px;background:var(--good-soft);font-weight:600}
+td.opL{background:var(--accent-soft);color:var(--accent);font-weight:600}
+td.opR{background:var(--hot-soft);color:var(--hot);font-weight:600}
+td.final{background:var(--good-soft);color:var(--good);font-weight:700}
+.calc{font-family:var(--font-mono);font-size:.9rem;display:grid;gap:8px}
+.calc .line{overflow-x:auto;white-space:nowrap}
+.cL{color:var(--accent);font-weight:600}.cR{color:var(--hot);font-weight:600}
+.tag{display:inline-block;font-family:var(--font-body);font-size:.75rem;font-weight:600;padding:2px 8px;border-radius:99px}
+.tag.new{background:var(--good-soft);color:var(--good)}
+.tag.no{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.result{display:grid;gap:10px}
+.paren{font-family:var(--font-mono);font-size:1.15rem;font-weight:600;overflow-x:auto;white-space:nowrap;padding-block:4px}
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px}
+.cmp{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:grid;gap:2px}
+.cmp .v{font-family:var(--font-mono);font-size:1.05rem;font-weight:600;font-variant-numeric:tabular-nums}
+.cmp.best{border-color:var(--good);background:var(--good-soft)}
+.cmp.best .v{color:var(--good)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.8rem;color:var(--muted)}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line)}
+.note{font-size:.82rem;color:var(--muted);margin:0}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Visualisasi Matrix Chain Multiplication</h1>
+    <p class="lead">Lihat bagaimana pemrograman dinamis mengisi tabel biaya m[i, j] dan titik belah s[i, j] langkah demi langkah, sampai menemukan urutan perkalian dengan jumlah perkalian skalar paling sedikit.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="lbl-in">
+    <div class="controls">
+      <div class="field">
+        <label class="label" id="lbl-in" for="dims">Vektor dimensi p (n + 1 angka, maksimal 11)</label>
+        <input type="text" id="dims" value="30, 35, 15, 5, 10, 20, 25" spellcheck="false">
+      </div>
+      <button class="primary" id="apply">Hitung</button>
+    </div>
+    <div class="presets" style="margin-top:10px">
+      <span class="label" style="align-self:center">Contoh:</span>
+      <button data-p="30,35,15,5,10,20,25">CLRS 6 matriks</button>
+      <button data-p="10,100,5,50">3 matriks (Bab 1)</button>
+      <button data-p="10,128,256,512,784,1024">MLP linear</button>
+      <button data-p="766,257,1284,20,362,340,823,564,251">Rantai heterogen</button>
+    </div>
+    <div class="err" id="err" role="alert"></div>
+    <div class="label" style="margin-bottom:6px">Rantai matriks</div>
+    <div class="chain" id="chain"></div>
+  </section>
+
+  <section class="panel">
+    <div class="player">
+      <button id="reset" aria-label="Ke awal">⏮</button>
+      <button id="prev" aria-label="Langkah sebelumnya">◀</button>
+      <button class="primary" id="play">Putar</button>
+      <button id="next" aria-label="Langkah berikutnya">▶</button>
+      <button id="end" aria-label="Ke akhir">⏭</button>
+      <select id="speed" aria-label="Kecepatan">
+        <option value="1400">Lambat</option>
+        <option value="700" selected>Sedang</option>
+        <option value="250">Cepat</option>
+      </select>
+      <input type="range" id="scrub" min="0" value="0" aria-label="Posisi langkah">
+      <span class="counter" id="counter"></span>
+    </div>
+  </section>
+
+  <section class="panel calc" aria-live="polite" id="calc"></section>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="label" style="margin-bottom:8px">Tabel m[i, j] · biaya minimum</div>
+      <div class="tbl-wrap"><table id="tm"></table></div>
+    </section>
+    <section class="panel">
+      <div class="label" style="margin-bottom:8px">Tabel s[i, j] · titik belah optimal k</div>
+      <div class="tbl-wrap"><table id="ts"></table></div>
+    </section>
+  </div>
+  <div class="legend">
+    <span><i class="sw" style="background:var(--good-soft);outline:2px solid var(--ink)"></i>Sel yang sedang dihitung</span>
+    <span><i class="sw" style="background:var(--accent-soft)"></i>m[i, k] (bagian kiri)</span>
+    <span><i class="sw" style="background:var(--hot-soft)"></i>m[k+1, j] (bagian kanan)</span>
+  </div>
+
+  <section class="panel result" id="result"></section>
+  <p class="note">Rekurens: m[i, j] = min<sub>i ≤ k &lt; j</sub> { m[i, k] + m[k+1, j] + p<sub>i−1</sub>·p<sub>k</sub>·p<sub>j</sub> }. Total evaluasi = (n³ − n)/6, kompleksitas waktu Θ(n³) dan ruang Θ(n²). Algoritma No. 15, Tugas Analisis Algoritma Komputasi.</p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = v => v.toLocaleString('id-ID');
+let p = [], n = 0, steps = [], pos = 0, timer = null;
+
+function parse(text){
+  const nums = text.split(/[\s,;]+/).filter(Boolean).map(Number);
+  if (nums.length < 2) return 'Masukkan minimal 2 angka (1 matriks).';
+  if (nums.length > 11) return 'Maksimal 11 angka (10 matriks) agar tabel tetap terbaca.';
+  if (nums.some(x => !Number.isInteger(x) || x < 1)) return 'Semua dimensi harus bilangan bulat positif.';
+  return nums;
+}
+
+function build(){
+  steps = [];
+  for (let l = 2; l <= n; l++)
+    for (let i = 1; i <= n - l + 1; i++){
+      const j = i + l - 1;
+      for (let k = i; k < j; k++) steps.push({l, i, j, k});
+    }
+}
+
+// Mainkan ulang langkah 1..t untuk mendapatkan isi tabel pada posisi t
+function stateAt(t){
+  const m = Array.from({length:n+1}, () => Array(n+1).fill(null));
+  const s = Array.from({length:n+1}, () => Array(n+1).fill(null));
+  for (let i = 1; i <= n; i++) m[i][i] = 0;
+  let info = null;
+  for (let x = 0; x < t; x++){
+    const {i, j, k} = steps[x];
+    const prev = m[i][j];
+    const q = m[i][k] + m[k+1][j] + p[i-1]*p[k]*p[j];
+    const better = prev === null || q < prev;
+    if (better){ m[i][j] = q; s[i][j] = k; }
+    if (x === t - 1) info = {i, j, k, q, prev, better, left:m[i][k], right:m[k+1][j], mult:p[i-1]*p[k]*p[j]};
+  }
+  return {m, s, info};
+}
+
+function parens(s, i, j){
+  if (i === j) return `A${i}`;
+  return `(${parens(s, i, s[i][j])}${parens(s, s[i][j]+1, j)})`;
+}
+function costOf(split, i, j){
+  if (i === j) return 0;
+  const k = split(i, j);
+  return costOf(split, i, k) + costOf(split, k+1, j) + p[i-1]*p[k]*p[j];
+}
+
+function renderChain(info){
+  $('chain').innerHTML = Array.from({length:n}, (_, x) => {
+    const idx = x + 1;
+    let cls = '';
+    if (info){ if (idx >= info.i && idx <= info.k) cls = 'inL'; else if (idx > info.k && idx <= info.j) cls = 'inR'; }
+    return `<div class="mat ${cls}"><b>A<sub>${idx}</sub></b>${p[x]} × ${p[x+1]}</div>`;
+  }).join('');
+}
+
+function renderTable(el, tab, info, isS, finished){
+  let h = '<tr><th>i \\ j</th>' + Array.from({length:n}, (_, x) => `<th>${x+1}</th>`).join('') + '</tr>';
+  for (let i = 1; i <= n; i++){
+    h += `<tr><th>${i}</th>`;
+    for (let j = 1; j <= n; j++){
+      if (j < i || (isS && j === i)){ h += '<td class="void"></td>'; continue; }
+      const v = tab[i][j];
+      let cls = [];
+      if (i === j) cls.push('diag');
+      if (info){
+        if (i === info.i && j === info.j) cls.push('cur');
+        else if (!isS && i === info.i && j === info.k) cls.push('opL');
+        else if (!isS && i === info.k + 1 && j === info.j) cls.push('opR');
+      }
+      if (finished && i === 1 && j === n) cls.push('final');
+      h += `<td class="${cls.join(' ')}">${v === null ? '' : fmt(v)}</td>`;
+    }
+    h += '</tr>';
+  }
+  el.innerHTML = h;
+}
+
+function renderCalc(info, finished){
+  const total = steps.length;
+  if (!info){
+    $('calc').innerHTML = `<div class="label">Langkah</div><div>Kondisi awal: diagonal m[i, i] = 0 karena satu matriks tidak membutuhkan perkalian. Tekan <b>Putar</b> atau <b>▶</b> untuk mulai mengisi tabel. Total ada ${fmt(total)} evaluasi = (n³ − n)/6 dengan n = ${n}.</div>`;
+    return;
+  }
+  const {i, j, k, q, prev, better, left, right, mult} = info;
+  $('calc').innerHTML = `
+    <div class="label">Panjang rantai l = ${j-i+1} · menghitung m[${i}, ${j}] dengan titik belah k = ${k}</div>
+    <div class="line">(A<sub>${i}</sub>…A<sub>${k}</sub>)(A<sub>${k+1}</sub>…A<sub>${j}</sub>)</div>
+    <div class="line">q = <span class="cL">m[${i},${k}]</span> + <span class="cR">m[${k+1},${j}]</span> + p<sub>${i-1}</sub>·p<sub>${k}</sub>·p<sub>${j}</sub>
+      = <span class="cL">${fmt(left)}</span> + <span class="cR">${fmt(right)}</span> + ${p[i-1]}·${p[k]}·${p[j]}
+      = <b>${fmt(q)}</b></div>
+    <div>${better
+      ? `<span class="tag new">Minimum baru</span> m[${i},

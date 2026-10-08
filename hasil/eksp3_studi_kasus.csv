@@ -1,0 +1,10 @@
+skenario,urutan,pengurungan,perkalian_skalar,rasio_perkalian_vs_optimal,median_detik,rata2_detik,SD,rasio_median_vs_optimal
+"MLP linear 784-512-256-128-10, batch 1024",Kiri-ke-kanan,((((A1A2)A3)A4)A5),13680640,1.00,0.001392,0.001553,0.000406,1.01
+"MLP linear 784-512-256-128-10, batch 1024",Kanan-ke-kiri,(A1(A2(A3(A4A5)))),580124672,42.40,0.024172,0.027394,0.005705,17.46
+"MLP linear 784-512-256-128-10, batch 1024",Optimal (DP),((((A1A2)A3)A4)A5),13680640,1.00,0.001384,0.002303,0.003316,1.00
+Rantai Jacobian x vektor (forward-mode),Kiri-ke-kanan,(((A1A2)A3)A4),6752250000,1000.33,0.230775,0.235120,0.015407,69.71
+Rantai Jacobian x vektor (forward-mode),Kanan-ke-kiri,(A1(A2(A3A4))),6750000,1.00,0.003698,0.003936,0.001133,1.12
+Rantai Jacobian x vektor (forward-mode),Optimal (DP),(A1(A2(A3A4))),6750000,1.00,0.003310,0.003412,0.000535,1.00
+Rantai heterogen 8 matriks,Kiri-ke-kanan,(((((((A1A2)A3)A4)A5)A6)A7)A8),1050602704,30.40,0.053117,0.054261,0.006598,16.61
+Rantai heterogen 8 matriks,Kanan-ke-kiri,(A1(A2(A3(A4(A5(A6(A7A8))))))),358137342,10.36,0.016716,0.017462,0.001964,5.23
+Rantai heterogen 8 matriks,Optimal (DP),((A1(A2A3))((((A4A5)A6)A7)A8)),34555040,1.00,0.003198,0.004882,0.003227,1.00
